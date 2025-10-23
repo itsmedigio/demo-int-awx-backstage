@@ -23,7 +23,7 @@ backend.add(
 // techdocs plugin
 backend.add(import('@backstage/plugin-techdocs-backend'));
 
-// auth plugin
+// auth plugin (guest provider enables anonymous usage without login)
 backend.add(import('@backstage/plugin-auth-backend'));
 // See https://backstage.io/docs/backend-system/building-backends/migrating#the-auth-plugin
 backend.add(import('@backstage/plugin-auth-backend-module-guest-provider'));

@@ -1,0 +1,12 @@
+# templates/sql-server-deploy/skeleton/catalog-info.yaml
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ${{ values.instanceName }}
+  description: Microsoft SQL Server provisioned via Backstage.
+  tags: [sql-server, provisioned]
+spec:
+  type: sql-server
+  owner: ${{ values.owner }}
+  system: platform-engineering # Example system
+  lifecycle: production # Or the lifecycle based on the environment
