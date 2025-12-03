@@ -1,4 +1,5 @@
 import { TechRadarPage } from '@backstage-community/plugin-tech-radar';
+
 import { apiDocsPlugin, ApiExplorerPage } from '@backstage/plugin-api-docs';
 import {
   CatalogEntityPage,
@@ -10,8 +11,8 @@ import {
   catalogImportPlugin,
 } from '@backstage/plugin-catalog-import';
 import { orgPlugin } from '@backstage/plugin-org';
-import { scaffolderPlugin } from '@backstage/plugin-scaffolder';
-import { createScaffolderFieldExtension } from '@backstage/plugin-scaffolder-react';
+import { createScaffolderFieldExtension, ScaffolderPage, scaffolderPlugin } from '@backstage/plugin-scaffolder';
+
 import { SearchPage } from '@backstage/plugin-search';
 import {
   TechDocsIndexPage,
@@ -45,8 +46,36 @@ import { NotificationsPage } from '@backstage/plugin-notifications';
 import { RequirePermission } from '@backstage/plugin-permission-react';
 import { SignalsDisplay } from '@backstage/plugin-signals';
 
+const fieldExtensions = [
+  createScaffolderFieldExtension({
+    name: 'ServerNamePicker',
+    component: ServerNamePickerExtension,
+  }),
+  createScaffolderFieldExtension({
+    name: 'InstanceNameGenerator',
+    component: InstanceNameGeneratorExtension,
+  }),
+  createScaffolderFieldExtension({
+    name: 'SqlEditionPicker',
+    component: SqlEditionPickerExtension,
+  }),
+];
+
+// wrapper that injects the extensions into the Scaffolder page
+// cast to any to silence strict prop typing differences between versions
+const ScaffolderPageWithExtensions = () => {
+  // @ts-expect-error - runtime prop accepted even if types are out-of-sync in installed packages
+  return <ScaffolderPage fieldExtensions={fieldExtensions} />;
+};
+
+
+
 const app = createApp({
   apis,
+  components: {
+    SignInPage: props => <SignInPage {...props} auto providers={['guest']} />,
+  },
+
   bindRoutes({ bind }) {
     bind(catalogPlugin.externalRoutes, {
       createComponent: scaffolderPlugin.routes.root,
@@ -64,28 +93,9 @@ const app = createApp({
       catalogIndex: catalogPlugin.routes.catalogIndex,
     });
   },
-  components: {
-    SignInPage: props => <SignInPage {...props} auto providers={['guest']} />,
-  },
 });
 
-// Register custom scaffolder field extensions
-const ScaffolderPageWithExtensions = scaffolderPlugin.provide(
-  createScaffolderFieldExtension({
-    name: 'ServerNamePicker',
-    component: ServerNamePickerExtension,
-  }),
-).provide(
-  createScaffolderFieldExtension({
-    name: 'InstanceNameGenerator',
-    component: InstanceNameGeneratorExtension,
-  }),
-).provide(
-  createScaffolderFieldExtension({
-    name: 'SqlEditionPicker',
-    component: SqlEditionPickerExtension,
-  }),
-);
+
 
 const routes = (
   <FlatRoutes>

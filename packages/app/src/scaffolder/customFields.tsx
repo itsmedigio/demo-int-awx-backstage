@@ -1,7 +1,7 @@
 // File: packages/app/src/scaffolder/customFields.tsx
 // VERSION WITH MOCK DATA FOR TESTING
 
-import { FieldExtensionComponentProps } from '@backstage/plugin-scaffolder-react';
+import { FieldExtensionComponentProps } from '@backstage/plugin-scaffolder';
 import FormControl from '@material-ui/core/FormControl';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
