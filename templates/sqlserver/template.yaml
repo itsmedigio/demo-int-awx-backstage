@@ -1,119 +1,150 @@
-# template.yaml
-
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: sqlserver
-  title: Deploy New SQL Server Instance
-  description: Provision a new Microsoft SQL Server instance via AWX.
-  tags:
-    - infrastructure
-    - sql
-    - database
+  name: sql-server-deploy
+  title: SQL Server Deployment
+  description: Deploy SQL Server on-premises or cloud via AWX
 spec:
-  owner: user:guest # Replace with the actual owner (e.g., group:platform-team)
-  type: database # A custom type for your Catalog entity
-
-  # === 1. PARAMETERS: Defines the form that the user sees ===
+  owner: infra-team
+  type: service
   parameters:
-    - title: Instance Details
-      description: Provide the configuration for your new SQL Server.
+    - title: General Information (Page 1)
       required:
-        - instanceName
+        - ammCode
         - environment
-        - edition
+        - serverName1
+        - features
+        - rtoNumber
       properties:
-        instanceName:
-          title: Instance Name
+        # AMM Code: Mandatory, Dropdown [cite: 12]
+        ammCode:
           type: string
-          description: A unique name for your new SQL Server (e.g., SQLQO5DD01).
-          ui:autofocus: true
-          # You can add a regex pattern for validation:
-          # pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
-
+          title: AMM Code
+          enum: ['AMM01', 'AMM02', 'AMM03'] # Populate with real data or use custom fetcher
+        
+        # Environment: Mandatory, Dropdown (DEV, IT, QA, PROD) [cite: 13]
         environment:
+          type: string
           title: Environment
+          enum: ['DEV', 'IT', 'QA', 'PROD']
+        
+        # Server Name 1: Filtered dropdown (Requires Custom Extension) 
+        # We use a custom UI field here to handle the "AMM + Env" filtering logic
+        serverName1:
           type: string
-          description: Which environment is this database for?
-          # Use enum to create a dropdown list
-          enum:
-            - dev
-            - it
-            - qa
-            - prod
-          default: dev
-
-        edition:
-          title: Database Edition
+          title: Server Name 1
+          ui:field: SimpleServerSelector 
+        
+        # Server Name 2: Optional, triggers AlwaysOn [cite: 16]
+        serverName2:
           type: string
-          description: Select the required database edition.
-          # Use enum with ui:widget: select for a clean dropdown
-          enum:
-            - standard
-            - enterprise
-            - developer
-          enumNames:
-            - 'Developer (Free for development/testing)'
-            - 'Standard (500€/month)'
-            - 'Enterprise (1000€/month)'
-
-    - title: Owner and Catalog
-      description: Who will own this new resource in Backstage?
-      required:
-        - owner
-      properties:
-        owner:
-          title: Owner
-          type: string
-          description: Select the team or user who will own this resource.
-          # The OwnerPicker is a built-in custom field to select a Catalog entity
-          ui:field: OwnerPicker
+          title: Server Name 2
+          ui:field: SimpleServerSelector
+        
+        # AlwaysOn Instance: Conditional boolean [cite: 17]
+        # Logic: Only appears if serverName2 is populated (handled via dependencies below)
+        alwaysOnInstance:
+          type: boolean
+          title: Enable AlwaysOn Instance
+          default: false
+        
+        # Features: Multi-select, Default SQLENGINE [cite: 19]
+        features:
+          type: array
+          title: Features
+          uniqueItems: true
+          items:
+            type: string
+            [cite_start]enum: ['SQLENGINE', 'FULLTEXT', 'REPLICATION', 'AS', 'IS', 'RS', 'CONN', 'BC', 'SDK'] [cite: 22]
+          default: ['SQLENGINE']
           ui:options:
-            allowedKinds:
-              - Group
-              - User
-
-  # === 2. STEPS: Defines the backend actions to be executed ===
-  steps:
-    # STEP 1: Placeholder for fetching a base structure if needed (e.g., catalog-info.yaml)
-    - id: fetch-skeleton
-      name: Fetching Template Files
-      action: fetch:template
-      input:
-        url: ./skeleton # Assumes you have a 'skeleton' folder next to template.yaml
-        values:
-          instanceName: ${{ parameters.instanceName }}
-          owner: ${{ parameters.owner }}
-          # ... and any other variables you need in your template files
-
-    # STEP 2: The critical step to trigger AWX
-    - id: trigger-awx-deployment
-      name: Trigger AWX Deployment
-      # NOTE: This is a placeholder for a custom AWX action.
-      # You will need to install/create a custom action that calls your AWX API.
-      action: awx:job:launch 
-      input:
-        jobTemplateName: 'SQL_Server_Provisioning'
-        # Pass the form data as 'extra_vars' to your AWX Job Template
-        extra_vars:
-          db_instance_name: ${{ parameters.instanceName }}
-          db_environment: ${{ parameters.environment }}
-          db_size: ${{ parameters.size }}
-          db_owner: ${{ parameters.owner }}
-
-    # STEP 3: Register the new resource in the Backstage Catalog
-    - id: register-catalog
-      name: Register in Catalog
-      action: catalog:register
-      input:
-        repoContentsUrl: ${{ steps.fetch-skeleton.output.repoContentsUrl }}
-        catalogInfoPath: '/catalog-info.yaml'
-
-  # === 3. OUTPUT: What to show the user upon completion ===
-  output:
-    links:
-      - title: Go to new SQL Server Entity
-        icon: database
-        type: entity
-        # This link will be generated by the catalog:register action
-        entityRef: ${{ steps['register-catalog'].output.entityRef }}
+            orderable: false
+            
+        # Instance Name: Readonly, Autogenerated [cite: 24]
+        instanceName:
+          type: string
+          title: Generated Instance Name
+          readOnly: true
+          ui:field: AutoGenInstanceName # Custom field to handle logic
+          
+        # RTO Number: 6-digit numeric [cite: 34]
+        rtoNumber:
+          type: string # String allows regex validation easily
+          title: RTO Number
+          pattern: '^\d{6}$'
+    - title: SQL Configuration (Page 2)
+      required:
+        - sqlVersion
+        - sqlEdition
+        - collation
+      properties:
+        # SQL Version: Default 2022 [cite: 36]
+        sqlVersion:
+          type: string
+          title: SQL Version
+          enum: ['2016', '2019', '2022', '2025']
+          default: '2022'
+        
+        # SQL Edition: Rules applied via Custom Extension 
+        sqlEdition:
+          type: string
+          title: SQL Edition
+          ui:field: DynamicSqlEditionSelector # Handles Dev/Prod constraints
+        
+        # Collation: Default provided [cite: 38]
+        collation:
+          type: string
+          title: Collation
+          default: 'SQL_Latin1_General_CP1_CI_AS'
+          
+        # Database Names: List of strings [cite: 39]
+        databaseNames:
+          type: array
+          title: Database Names
+          items:
+            type: string
+    - title: Network & Witness (Page 3)
+        properties:
+          # Witness section is conditional 
+          witnessName:
+            type: string
+            title: Witness Name
+          witnessKey:
+            type: string
+            title: Witness Key
+            ui:widget: password
+            
+          # AlwaysOn Network Config 
+          alwaysOnListenerIp:
+            type: string
+            title: AlwaysOn Listener IP
+            [cite_start]pattern: '^((25[0-5]|2[0-4]|1d|[1-9]|)\d)\.?\b){4}$' # Regex from PDF 
+          alwaysOnNetmask:
+            type: string
+            title: AlwaysOn Netmask
+            
+          # Failover Config [cite: 62]
+          failoverSqlRoleIp:
+            type: string
+            title: Failover SQL Role IP
+            pattern: '^((25[0-5]|2[0-4]|1d|[1-9]|)\d)\.?\b){4}$'
+          roleNetmask:
+            type: string
+            title: Role Netmask
+            
+        # Logic to show/hide fields based on previous inputs
+        dependencies:
+          alwaysOnInstance:
+            oneOf:
+              - properties:
+                  alwaysOnInstance:
+                    const: true
+                required:
+                  - alwaysOnListenerIp
+                  - alwaysOnNetmask
+              - properties:
+                  alwaysOnInstance:
+                    const: false
+                required:
+                  - failoverSqlRoleIp
+                  - roleNetmask
