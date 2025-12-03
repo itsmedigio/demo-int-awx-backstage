@@ -10,7 +10,8 @@ import {
   catalogImportPlugin,
 } from '@backstage/plugin-catalog-import';
 import { orgPlugin } from '@backstage/plugin-org';
-import { ScaffolderPage, scaffolderPlugin } from '@backstage/plugin-scaffolder';
+import { scaffolderPlugin } from '@backstage/plugin-scaffolder';
+import { createScaffolderFieldExtension } from '@backstage/plugin-scaffolder-react';
 import { SearchPage } from '@backstage/plugin-search';
 import {
   TechDocsIndexPage,
@@ -25,7 +26,11 @@ import { apis } from './apis';
 import { entityPage } from './components/catalog/EntityPage';
 import { Root } from './components/Root';
 import { searchPage } from './components/search/SearchPage';
-
+import {
+  InstanceNameGeneratorExtension,
+  ServerNamePickerExtension,
+  SqlEditionPickerExtension,
+} from './scaffolder/customFields';
 
 import { createApp } from '@backstage/app-defaults';
 import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
@@ -64,6 +69,24 @@ const app = createApp({
   },
 });
 
+// Register custom scaffolder field extensions
+const ScaffolderPageWithExtensions = scaffolderPlugin.provide(
+  createScaffolderFieldExtension({
+    name: 'ServerNamePicker',
+    component: ServerNamePickerExtension,
+  }),
+).provide(
+  createScaffolderFieldExtension({
+    name: 'InstanceNameGenerator',
+    component: InstanceNameGeneratorExtension,
+  }),
+).provide(
+  createScaffolderFieldExtension({
+    name: 'SqlEditionPicker',
+    component: SqlEditionPickerExtension,
+  }),
+);
+
 const routes = (
   <FlatRoutes>
     <Route
@@ -87,7 +110,7 @@ const routes = (
         <ReportIssue />
       </TechDocsAddons>
     </Route>
-    <Route path="/create" element={<ScaffolderPage />} />
+    <Route path="/create" element={<ScaffolderPageWithExtensions />} />
     <Route path="/api-docs" element={<ApiExplorerPage />} />
     <Route
       path="/catalog-import"

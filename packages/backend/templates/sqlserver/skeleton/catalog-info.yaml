@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-sql-service
+  description: An example SQL service
+  annotations:
+    # This connects the component to GitHub, TechDocs, etc.
+    github.com/project-slug: my-org/my-sql-service
+spec:
+  type: service
+  lifecycle: experimental
+  owner: user:guest
+  system: database-systems
